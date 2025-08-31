@@ -9,7 +9,7 @@
             </div>
             <div class="row">
                 <div class="offset-md-3 col-md-6">
-                    <form class="yourform" action="{{ route('settings') }}" method="post" autocomplete="off">
+                    <form class="yourform" action="{{ route('settings.update') }}" method="post" autocomplete="off">
                         @csrf
                         <div class="form-group">
                             <label>Return Days</label>

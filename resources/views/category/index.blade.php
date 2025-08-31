@@ -7,7 +7,7 @@
                     <h2 class="admin-heading">All Categories</h2>
                 </div>
                 <div class="offset-md-7 col-md-2">
-                    <a class="add-new" href="{{ route('category.create') }}">Add Category</a>
+                    <a class="add-new" href="{{ route('categories.create') }}">Add Category</a>
                 </div>
             </div>
             <div class="row">
@@ -26,10 +26,10 @@
                                     <td>{{ $category->id }}</td>
                                     <td>{{ $category->name }}</td>
                                     <td class="edit">
-                                        <a href="{{ route('category.edit', $category) }}" class="btn btn-success">Edit</a>
+                                        <a href="{{ route('categories.edit', $category) }}" class="btn btn-success">Edit</a>
                                     </td>
                                     <td class="delete">
-                                        <form action="{{ route('category.destroy', $category) }}" method="post"
+                                        <form action="{{ route('categories.destroy', $category) }}" method="post"
                                             class="form-hidden">
                                             <button class="btn btn-danger delete-author">Delete</button>
                                             @csrf

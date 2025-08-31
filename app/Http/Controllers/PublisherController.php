@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\publisher;
-use App\Http\Requests\StorepublisherRequest;
-use App\Http\Requests\UpdatepublisherRequest;
+use App\Models\Publisher;
+use App\Http\Requests\StorePublisherRequest;
+use App\Http\Requests\UpdatePublisherRequest;
 
 class PublisherController extends Controller
 {
@@ -16,7 +16,7 @@ class PublisherController extends Controller
     public function index()
     {
         return view('publisher.index', [
-            'publishers' => publisher::Paginate(5)
+            'publishers' => Publisher::Paginate(5)
         ]);
     }
 
@@ -33,19 +33,32 @@ class PublisherController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \App\Http\Requests\StorepublisherRequest  $request
+     * @param  \App\Http\Requests\StorePublisherRequest  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(StorepublisherRequest $request)
+    public function store(StorePublisherRequest $request)
     {
-        publisher::create($request->validated());
+        Publisher::create($request->validated());
         return redirect()->route('publishers');
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  \App\\Models\\Publisher  $publisher
+     * @return \Illuminate\Http\Response
+     */
+    public function show(publisher $publisher)
+    {
+        return view('publisher.show', [
+            'publisher' => $publisher
+        ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\publisher  $publisher
+     * @param  \App\\Models\\Publisher  $publisher
      * @return \Illuminate\Http\Response
      */
     public function edit(publisher $publisher)
@@ -58,14 +71,14 @@ class PublisherController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \App\Http\Requests\UpdatepublisherRequest  $request
-     * @param  \App\Models\publisher  $publisher
+     * @param  \App\Http\Requests\UpdatePublisherRequest  $request
+     * @param  \App\\Models\\Publisher  $publisher
      * @return \Illuminate\Http\Response
      */
-    public function update(UpdatepublisherRequest $request, $id)
+    public function update(UpdatePublisherRequest $request, $id)
     {
-        $publisher = publisher::find($id);
-        $publisher->name = $request->name;
+        $publisher = Publisher::find($id);
+        $publisher->name = $request->input('name');
         $publisher->save();
 
         return redirect()->route('publishers');
@@ -78,7 +91,7 @@ class PublisherController extends Controller
      */
     public function destroy($id)
     {
-        publisher::find($id)->delete();
+        Publisher::find($id)->delete();
         return redirect()->route('publishers');
     }
 }

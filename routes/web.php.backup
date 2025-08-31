@@ -95,7 +95,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/monthly-Wise', [ReportsController::class, 'month_wise'])->name('reports.month_wise');
     Route::post('/reports/monthly-Wise', [ReportsController::class, 'generate_month_wise_report'])->name('reports.month_wise_generate');
     Route::get('/reports/not-returned', [ReportsController::class, 'not_returned'])->name('reports.not_returned');
-    Route::get('/reports/inventory', [ReportsController::class, 'inventory'])->name('reports.inventory');
     
     // Export routes
     Route::get('/reports/export/{format}', [ReportsController::class, 'export'])->name('reports.export');

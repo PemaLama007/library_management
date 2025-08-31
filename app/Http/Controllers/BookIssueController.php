@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\book_issue;
-use App\Http\Requests\Storebook_issueRequest;
-use App\Http\Requests\Updatebook_issueRequest;
-use App\Models\auther;
-use App\Models\book;
-use App\Models\settings;
-use App\Models\student;
+use App\Models\BookIssue;
+use App\Http\Requests\StoreBookIssueRequest;
+use App\Http\Requests\UpdateBookIssueRequest;
+use App\Models\Author;
+use App\Models\Book;
+use App\Models\Settings;
+use App\Models\Student;
 use App\Services\NotificationService;
 use \Illuminate\Http\Request;
 
@@ -22,7 +22,7 @@ class BookIssueController extends Controller
     public function index()
     {
         return view('book.issueBooks', [
-            'books' => book_issue::Paginate(5)
+            'books' => BookIssue::Paginate(5)
         ]);
     }
 
@@ -33,10 +33,10 @@ class BookIssueController extends Controller
      */
     public function create(Request $request)
     {
-        $students = student::latest()->get();
+        $students = Student::latest()->get();
         
         // Get available books (books with available copies > 0 OR books with old status system)
-        $books = book::where(function($query) {
+        $books = Book::where(function($query) {
             $query->where('available_copies', '>', 0)
                   ->orWhere('status', 'Y'); // Fallback for books not yet migrated
         })->get();
@@ -44,20 +44,20 @@ class BookIssueController extends Controller
         return view('book.issueBook_add', [
             'students' => $students,
             'books' => $books,
-            'selectedBook' => $request->book_id,
-            'selectedStudent' => $request->student_id,
+            'selectedBook' => $request->input('book_id'),
+            'selectedStudent' => $request->input('student_id'),
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \App\Http\Requests\Storebook_issueRequest  $request
+     * @param  \App\Http\Requests\StoreBookIssueRequest  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Storebook_issueRequest $request)
+    public function store(StoreBookIssueRequest $request)
     {
-        $book = book::find($request->book_id);
+        $book = Book::find($request->input('book_id'));
         
         // Check if book is available using new inventory system
         if (!$book->isAvailable()) {
@@ -65,13 +65,13 @@ class BookIssueController extends Controller
         }
         
         $issue_date = date('Y-m-d');
-        $settings = settings::latest()->first();
+        $settings = Settings::latest()->first();
         $return_days = $settings ? $settings->return_days : 7; // Default to 7 days if no settings
         $return_date = date('Y-m-d', strtotime("+" . $return_days . " days"));
         
-        $bookIssue = book_issue::create($request->validated() + [
-            'student_id' => $request->student_id,
-            'book_id' => $request->book_id,
+        $bookIssue = BookIssue::create($request->validated() + [
+            'student_id' => $request->input('student_id'),
+            'book_id' => $request->input('book_id'),
             'issue_date' => $issue_date,
             'return_date' => $return_date,
             'issue_status' => 'N',
@@ -84,7 +84,7 @@ class BookIssueController extends Controller
         $notificationService = new NotificationService();
         $notificationService->scheduleNotificationsForBookIssue($bookIssue);
         
-        return redirect()->route('book_issued')->with('success', 'Book issued successfully.');
+        return redirect()->route('book_issue')->with('success', 'Book issued successfully.');
     }
 
     /**
@@ -95,7 +95,7 @@ class BookIssueController extends Controller
      */
     public function show($id)
     {
-        $bookIssue = book_issue::with(['student', 'book', 'book.auther', 'book.category', 'book.publisher'])->findOrFail($id);
+        $bookIssue = BookIssue::with(['student', 'book', 'book.author', 'book.category', 'book.publisher'])->findOrFail($id);
         
         // Calculate fine if applicable
         $currentDate = date_create(date('Y-m-d'));
@@ -105,7 +105,7 @@ class BookIssueController extends Controller
         if ($currentDate > $returnDate && $bookIssue->issue_status == 'N') {
             $diff = date_diff($returnDate, $currentDate);
             $overdueDays = $diff->format('%a');
-            $settings = settings::latest()->first();
+            $settings = Settings::latest()->first();
             $finePerDay = $settings ? $settings->fine : 0;
             $fine = $overdueDays * $finePerDay;
         }
@@ -125,7 +125,7 @@ class BookIssueController extends Controller
     public function edit($id)
     {
         // calculate the total fine  (total days * fine per day)
-        $book = book_issue::where('id',$id)->get()->first();
+        $book = BookIssue::where('id',$id)->get()->first();
         $currentDate = date_create(date('Y-m-d'));
         $returnDate = date_create($book->return_date->format('Y-m-d'));
         $fine = 0;
@@ -133,7 +133,7 @@ class BookIssueController extends Controller
         if ($currentDate > $returnDate && $book->issue_status == 'N') {
             $diff = date_diff($returnDate, $currentDate);
             $overdueDays = $diff->format('%a');
-            $settings = settings::latest()->first();
+            $settings = Settings::latest()->first();
             $finePerDay = $settings ? $settings->fine : 0;
             $fine = $overdueDays * $finePerDay;
         }
@@ -153,8 +153,8 @@ class BookIssueController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $bookIssue = book_issue::find($id);
-        $book = book::find($bookIssue->book_id);
+        $bookIssue = BookIssue::find($id);
+        $book = Book::find($bookIssue->book_id);
         
         // Mark as returned
         $bookIssue->issue_status = 'Y';
@@ -168,18 +168,18 @@ class BookIssueController extends Controller
         $notificationService = new NotificationService();
         $notificationService->createReturnConfirmation($bookIssue);
         
-        return redirect()->route('book_issued')->with('success', 'Book returned successfully.');
+        return redirect()->route('book_issue')->with('success', 'Book returned successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\book_issue  $book_issue
+     * @param  \App\Models\BookIssue  $book_issue
      * @return \Illuminate\Http\Response
      */
     public function destroy($id)
     {
-        book_issue::find($id)->delete();
-        return redirect()->route('book_issued');
+        BookIssue::find($id)->delete();
+        return redirect()->route('book_issue');
     }
 }

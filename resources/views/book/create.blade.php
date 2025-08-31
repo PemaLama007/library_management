@@ -40,13 +40,13 @@
                         </div>
                         <div class="form-group">
                             <label>Author</label>
-                            <select class="form-control @error('auther_id') isinvalid @enderror " name="auther_id" required>
+                            <select class="form-control @error('author_id') isinvalid @enderror " name="author_id" required>
                                 <option value="">Select Author</option>
                                 @foreach ($authors as $author)
                                     <option value='{{ $author->id }}'>{{ $author->name }}</option>";
                                 @endforeach
                             </select>
-                            @error('auther_id')
+                            @error('author_id')
                                 <div class="alert alert-danger" role="alert">
                                     {{ $message }}
                                 </div>
@@ -66,6 +66,42 @@
                                 </div>
                             @enderror
                         </div>
+                        
+                        <div class="form-group">
+                            <label for="isbn">ISBN (Optional)</label>
+                            <input type="text" id="isbn" class="form-control @error('isbn') isinvalid @enderror"
+                                placeholder="ISBN Number" name="isbn" value="{{ old('isbn') }}">
+                            @error('isbn')
+                                <div class="alert alert-danger" role="alert">
+                                    {{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description">Description (Optional)</label>
+                            <textarea id="description" class="form-control @error('description') isinvalid @enderror"
+                                placeholder="Book Description" name="description" rows="3">{{ old('description') }}</textarea>
+                            @error('description')
+                                <div class="alert alert-danger" role="alert">
+                                    {{ $message }}
+                                </div>
+                            @enderror
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="total_copies">Total Copies</label>
+                            <input type="number" id="total_copies" class="form-control @error('total_copies') isinvalid @enderror"
+                                placeholder="Number of copies" name="total_copies" value="{{ old('total_copies', 1) }}"
+                                min="1" max="999" required>
+                            @error('total_copies')
+                                <div class="alert alert-danger" role="alert">
+                                    {{ $message }}
+                                </div>
+                            @enderror
+                            <small class="form-text text-muted">How many copies of this book do you have?</small>
+                        </div>
+                        
                         <input type="submit" name="save" class="btn btn-danger" value="save" required>
                     </form>
                 </div>

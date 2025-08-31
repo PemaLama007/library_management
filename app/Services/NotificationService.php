@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Notification;
-use App\Models\book_issue;
-use App\Models\student;
+use App\Models\BookIssue;
+use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -13,7 +13,7 @@ class NotificationService
     /**
      * Create due date reminder notification
      */
-    public function createDueReminder(book_issue $bookIssue, int $daysBefore = 2): Notification
+    public function createDueReminder(BookIssue $bookIssue, int $daysBefore = 2): Notification
     {
         $dueDate = Carbon::parse($bookIssue->return_date);
         $scheduledAt = $dueDate->subDays($daysBefore);
@@ -32,7 +32,7 @@ class NotificationService
     /**
      * Create overdue notice notification
      */
-    public function createOverdueNotice(book_issue $bookIssue): Notification
+    public function createOverdueNotice(BookIssue $bookIssue): Notification
     {
         $overdueDays = Carbon::now()->diffInDays(Carbon::parse($bookIssue->return_date));
         $fine = $this->calculateFine($bookIssue);
@@ -51,7 +51,7 @@ class NotificationService
     /**
      * Create return confirmation notification
      */
-    public function createReturnConfirmation(book_issue $bookIssue): Notification
+    public function createReturnConfirmation(BookIssue $bookIssue): Notification
     {
         return Notification::create([
             'student_id' => $bookIssue->student_id,
@@ -110,9 +110,9 @@ class NotificationService
     /**
      * Calculate fine for overdue book
      */
-    private function calculateFine(book_issue $bookIssue): float
+    private function calculateFine(BookIssue $bookIssue): float
     {
-        $settings = \App\Models\settings::latest()->first();
+        $settings = \App\Models\Settings::latest()->first();
         $finePerDay = $settings ? $settings->fine : 1;
         
         $overdueDays = Carbon::now()->diffInDays(Carbon::parse($bookIssue->return_date));
@@ -123,7 +123,7 @@ class NotificationService
     /**
      * Schedule notifications for new book issue
      */
-    public function scheduleNotificationsForBookIssue(book_issue $bookIssue): void
+    public function scheduleNotificationsForBookIssue(BookIssue $bookIssue): void
     {
         // Schedule reminder 2 days before due date
         $this->createDueReminder($bookIssue, 2);
@@ -137,7 +137,7 @@ class NotificationService
      */
     public function checkOverdueBooks(): int
     {
-        $overdueIssues = book_issue::where('issue_status', 'N')
+        $overdueIssues = BookIssue::where('issue_status', 'N')
             ->where('return_date', '<', Carbon::now()->format('Y-m-d'))
             ->with(['student', 'book'])
             ->get();

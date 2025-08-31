@@ -13,6 +13,24 @@
             </div>
             <div class="row">
                 <div class="col-md-12">
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ session('success') }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    @endif
+                    
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    @endif
+                    
                     <div class="message"></div>
                     <table class="content-table">
                         <thead>
@@ -21,6 +39,7 @@
                             <th>Category</th>
                             <th>Author</th>
                             <th>Publisher</th>
+                            <th>Inventory</th>
                             <th>Status</th>
                             <th>Edit</th>
                             <th>Delete</th>
@@ -31,20 +50,27 @@
                                     <td class="id">{{ $book->id }}</td>
                                     <td>{{ $book->name }}</td>
                                     <td>{{ $book->category->name }}</td>
-                                    <td>{{ $book->auther->name }}</td>
+                                    <td>{{ $book->author->name }}</td>
                                     <td>{{ $book->publisher->name }}</td>
                                     <td>
-                                        @if ($book->status == 'Y')
+                                        <span class="badge badge-info">
+                                            {{ $book->available_copies ?? 0 }}/{{ $book->total_copies ?? 1 }}
+                                        </span>
+                                        <br>
+                                        <small class="text-muted">Available/Total</small>
+                                    </td>
+                                    <td>
+                                        @if (($book->available_copies ?? 0) > 0)
                                             <span class='badge badge-success'>Available</span>
                                         @else
-                                            <span class='badge badge-danger'>Issued</span>
+                                            <span class='badge badge-danger'>Out of Stock</span>
                                         @endif
                                     </td>
                                     <td class="edit">
-                                        <a href="{{ route('book.edit', $book) }}" class="btn btn-success">Edit</a>
+                                        <a href="{{ route('books.edit', $book) }}" class="btn btn-success">Edit</a>
                                     </td>
                                     <td class="delete">
-                                        <form action="{{ route('book.destroy', $book) }}" method="post"
+                                        <form action="{{ route('books.destroy', $book) }}" method="post"
                                             class="form-hidden">
                                             <button class="btn btn-danger delete-book">Delete</button>
                                             @csrf

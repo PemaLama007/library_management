@@ -7,7 +7,7 @@
                     <h2 class="admin-heading">All Publisher</h2>
                 </div>
                 <div class="offset-md-7 col-md-2">
-                    <a class="add-new" href="{{ route('publisher.create') }}">Add Publisher</a>
+                    <a class="add-new" href="{{ route('publishers.create') }}">Add Publisher</a>
                 </div>
             </div>
             <div class="row">
@@ -26,10 +26,10 @@
                                     <td>{{ $publisher->id }}</td>
                                     <td>{{ $publisher->name }}</td>
                                     <td class="edit">
-                                        <a href="{{ route('publisher.edit', $publisher) }}" class="btn btn-success">Edit</a>
+                                        <a href="{{ route('publishers.edit', $publisher) }}" class="btn btn-success">Edit</a>
                                     </td>
                                     <td class="delete">
-                                        <form action="{{ route('publisher.destroy', $publisher) }}" method="post"
+                                        <form action="{{ route('publishers.destroy', $publisher) }}" method="post"
                                             class="form-hidden">
                                             <button class="btn btn-danger delete-author">Delete</button>
                                             @csrf

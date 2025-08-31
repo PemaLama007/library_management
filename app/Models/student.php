@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class student extends Model
+class Student extends Model
 {
     use HasFactory;
     protected $guarded = [];
@@ -20,7 +20,7 @@ class student extends Model
      */
     public function bookIssues(): HasMany
     {
-        return $this->hasMany(book_issue::class);
+        return $this->hasMany(BookIssue::class);
     }
 
     /**

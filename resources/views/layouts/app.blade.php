@@ -27,18 +27,16 @@
                 <div class="col-md-4 text-center">
                     <!-- Global Search Bar -->
                     <div class="search-container">
-                        <form action="{{ route('search') }}" method="GET" id="searchForm">
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="globalSearch" name="q"
-                                       placeholder="Search books, students, authors..."
-                                       value="{{ request('q') }}" autocomplete="off">
-                                <div class="input-group-append">
-                                    <button class="btn btn-outline-secondary" type="submit">
-                                        <i class="fas fa-search"></i> Search
-                                    </button>
-                                </div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="globalSearch" name="q"
+                                   placeholder="Search books, students, authors..."
+                                   autocomplete="off">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="button" id="searchBtn">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
                             </div>
-                        </form>
+                        </div>
                         <div id="searchSuggestions" class="search-suggestions" style="display: none;"></div>
                     </div>
                 </div>
@@ -72,7 +70,7 @@
                         <li><a href="{{ route('categories') }}">Categories</a></li>
                         <li><a href="{{ route('books') }}">Books</a></li>
                         <li><a href="{{ route('students') }}">Reg Students</a></li>
-                        <li><a href="{{ route('book_issued') }}">Book Issue</a></li>
+                        <li><a href="{{ route('book_issue') }}">Book Issue</a></li>
                         <li><a href="{{ route('reports') }}">Reports</a></li>
                         <li><a href="{{ route('settings') }}">Settings</a></li>
                     </ul>
@@ -92,42 +90,76 @@
         $(document).ready(function() {
             var searchTimeout;
             
-            $('#globalSearch').on('keyup', function() {
+            // Handle search button click and Enter key press
+            function triggerSearch() {
+                var query = $('#globalSearch').val().trim();
+                
+                if (query.length >= 1) {
+                    performSearch(query, true); // true indicates this is from manual search
+                } else {
+                    $('#searchSuggestions').hide().empty();
+                }
+            }
+            
+            // Search button click
+            $('#searchBtn').on('click', function(e) {
+                e.preventDefault();
+                triggerSearch();
+            });
+            
+            // Enter key press on search input
+            $('#globalSearch').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    triggerSearch();
+                }
+            });
+            
+            // Typing in search input (for suggestions)
+            $('#globalSearch').on('keyup', function(e) {
+                if (e.which === 13) return; // Ignore Enter key for keyup
+                
                 var query = $(this).val();
                 
                 clearTimeout(searchTimeout);
                 
                 if (query.length >= 2) {
                     searchTimeout = setTimeout(function() {
-                        performSearch(query);
+                        performSearch(query, false); // false indicates this is from typing
                     }, 300);
                 } else {
                     $('#searchSuggestions').hide().empty();
                 }
             });
             
-            function performSearch(query) {
+            function performSearch(query, isFormSubmission) {
                 $.ajax({
                     url: '{{ route('search.ajax') }}',
                     method: 'GET',
                     data: { q: query },
                     success: function(response) {
-                        displaySuggestions(response);
+                        displaySuggestions(response, isFormSubmission);
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
                         $('#searchSuggestions').hide();
+                        if (isFormSubmission) {
+                            showNotFoundDialog(query);
+                        }
                     }
                 });
             }
             
-            function displaySuggestions(data) {
+            function displaySuggestions(data, isFormSubmission) {
                 var suggestions = $('#searchSuggestions');
                 suggestions.empty();
                 
-                if (data.books.length > 0 || data.students.length > 0 || data.authors.length > 0) {
+                var hasResults = data.books.length > 0 || data.students.length > 0 || data.authors.length > 0 || 
+                                data.categories.length > 0 || data.publishers.length > 0 || data.book_issues.length > 0;
+                
+                if (hasResults) {
                     var html = '<div class="search-results">';
                     
-                    if (data.books.length > 0) {
+                    if (data.books && data.books.length > 0) {
                         html += '<div class="search-category"><strong>Books</strong></div>';
                         data.books.forEach(function(book) {
                             html += '<div class="search-item" data-type="book" data-id="' + book.id + '">' +
@@ -135,7 +167,7 @@
                         });
                     }
                     
-                    if (data.students.length > 0) {
+                    if (data.students && data.students.length > 0) {
                         html += '<div class="search-category"><strong>Students</strong></div>';
                         data.students.forEach(function(student) {
                             html += '<div class="search-item" data-type="student" data-id="' + student.id + '">' +
@@ -143,7 +175,7 @@
                         });
                     }
                     
-                    if (data.authors.length > 0) {
+                    if (data.authors && data.authors.length > 0) {
                         html += '<div class="search-category"><strong>Authors</strong></div>';
                         data.authors.forEach(function(author) {
                             html += '<div class="search-item" data-type="author" data-id="' + author.id + '">' +
@@ -151,15 +183,94 @@
                         });
                     }
                     
-                    html += '<div class="search-footer">' +
-                           '<a href="{{ url("/search") }}?q=' + $('#globalSearch').val() + '" class="btn btn-sm btn-primary">' +
-                           'View All Results</a></div>';
+                    if (data.categories && data.categories.length > 0) {
+                        html += '<div class="search-category"><strong>Categories</strong></div>';
+                        data.categories.forEach(function(category) {
+                            html += '<div class="search-item" data-type="category" data-id="' + category.id + '">' +
+                                   '<i class="fas fa-tags"></i> ' + category.name + '</div>';
+                        });
+                    }
+                    
+                    if (data.publishers && data.publishers.length > 0) {
+                        html += '<div class="search-category"><strong>Publishers</strong></div>';
+                        data.publishers.forEach(function(publisher) {
+                            html += '<div class="search-item" data-type="publisher" data-id="' + publisher.id + '">' +
+                                   '<i class="fas fa-building"></i> ' + publisher.name + '</div>';
+                        });
+                    }
+                    
+                    if (data.book_issues && data.book_issues.length > 0) {
+                        html += '<div class="search-category"><strong>Book Issues</strong></div>';
+                        data.book_issues.forEach(function(issue) {
+                            html += '<div class="search-item" data-type="book_issue" data-id="' + issue.id + '">' +
+                                   '<i class="fas fa-exchange-alt"></i> ' + issue.book_name + ' - ' + issue.student_name + '</div>';
+                        });
+                    }
+                    
+                    if (!isFormSubmission) {
+                        // Removed the "View All Results" footer as requested
+                    }
                     
                     html += '</div>';
                     suggestions.html(html).show();
                 } else {
                     suggestions.hide();
+                    if (isFormSubmission) {
+                        showNotFoundDialog($('#globalSearch').val());
+                    }
                 }
+            }
+            
+            function showNotFoundDialog(query) {
+                // Create a Bootstrap modal for better UX
+                var modalHtml = `
+                    <div class="modal fade" id="noResultsModal" tabindex="-1" role="dialog" aria-labelledby="noResultsModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning text-white">
+                                    <h5 class="modal-title" id="noResultsModalLabel">
+                                        <i class="fas fa-search-minus me-2"></i>No Results Found
+                                    </h5>
+                                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body text-center">
+                                    <div class="mb-3">
+                                        <i class="fas fa-search" style="font-size: 3rem; color: #ffc107;"></i>
+                                    </div>
+                                    <h6 class="mb-3">No results found for "<strong>${query}</strong>"</h6>
+                                    <p class="text-muted">Try the following suggestions:</p>
+                                    <ul class="list-unstyled text-left">
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Check your spelling</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Use different keywords</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Search with fewer words</li>
+                                        <li><i class="fas fa-check-circle text-success me-2"></i>Try searching for partial names</li>
+                                    </ul>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-warning" data-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i>Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove existing modal if any
+                $('#noResultsModal').remove();
+                
+                // Add modal to body
+                $('body').append(modalHtml);
+                
+                // Show modal
+                $('#noResultsModal').modal('show');
+                
+                // Remove modal from DOM after it's hidden
+                $('#noResultsModal').on('hidden.bs.modal', function () {
+                    $(this).remove();
+                });
             }
             
             // Handle click on search suggestions
@@ -177,6 +288,15 @@
                     case 'author':
                         window.location.href = '{{ url("/authors") }}/' + id;
                         break;
+                    case 'category':
+                        window.location.href = '{{ url("/categories") }}/' + id;
+                        break;
+                    case 'publisher':
+                        window.location.href = '{{ url("/publishers") }}/' + id;
+                        break;
+                    case 'book_issue':
+                        window.location.href = '{{ url("/book-issue") }}/' + id;
+                        break;
                 }
             });
             
@@ -188,56 +308,6 @@
             });
         });
     </script>
-    
-    <style>
-        .search-container {
-            position: relative;
-        }
-        
-        .search-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-top: none;
-            max-height: 400px;
-            overflow-y: auto;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        .search-category {
-            background: #f8f9fa;
-            padding: 8px 12px;
-            font-weight: bold;
-            border-bottom: 1px solid #eee;
-            color: #1B3F63;
-        }
-        
-        .search-item {
-            padding: 10px 12px;
-            cursor: pointer;
-            border-bottom: 1px solid #f5f5f5;
-        }
-        
-        .search-item:hover {
-            background: #f8f9fa;
-        }
-        
-        .search-item i {
-            margin-right: 8px;
-            color: #1B3F63;
-        }
-        
-        .search-footer {
-            padding: 10px;
-            background: #f8f9fa;
-            text-align: center;
-            border-top: 1px solid #eee;
-        }
-    </style>
 </body>
 
 </html>

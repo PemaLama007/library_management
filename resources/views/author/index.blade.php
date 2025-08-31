@@ -12,6 +12,24 @@
             </div>
             <div class="row">
                 <div class="col-md-12">
+                    @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ session('success') }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    @endif
+                    
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    @endif
+                    
                     <div class="message"></div>
                     <table class="content-table">
                         <thead>
@@ -21,15 +39,15 @@
                             <th>Delete</th>
                         </thead>
                         <tbody>
-                            @forelse ($authors as $auther)
+                            @forelse ($authors as $author)
                                 <tr>
-                                    <td>{{ $auther->id }}</td>
-                                    <td>{{ $auther->name }}</td>
+                                    <td>{{ $author->id }}</td>
+                                    <td>{{ $author->name }}</td>
                                     <td class="edit">
-                                        <a href="{{ route('authors.edit', $auther) }}" class="btn btn-success">Edit</a>
+                                        <a href="{{ route('authors.edit', $author) }}" class="btn btn-success">Edit</a>
                                     </td>
                                     <td class="delete">
-                                        <form action="{{ route('authors.destroy', $auther->id) }}" method="post"
+                                        <form action="{{ route('authors.destroy', $author->id) }}" method="post"
                                             class="form-hidden">
                                             <button class="btn btn-danger delete-author">Delete</button>
                                             @csrf

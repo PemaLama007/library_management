@@ -12,7 +12,7 @@ class Notification extends Model
     
     protected $fillable = [
         'student_id',
-        'book_issue_id', 
+        'book_issue_id',
         'type',
         'title',
         'message',
@@ -39,6 +39,6 @@ class Notification extends Model
      */
     public function bookIssue(): BelongsTo
     {
-        return $this->belongsTo(book_issue::class, 'book_issue_id');
+        return $this->belongsTo(BookIssue::class, 'book_issue_id');
     }
 }

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class book_issue extends Model
+class BookIssue extends Model
 {
     use HasFactory;
     protected $guarded = [];
@@ -18,7 +18,7 @@ class book_issue extends Model
      */
     public function student(): BelongsTo
     {
-        return $this->belongsTo(student::class, 'student_id', 'id');
+        return $this->belongsTo(Student::class, 'student_id', 'id');
     }
 
     /**
@@ -28,7 +28,7 @@ class book_issue extends Model
      */
     public function book(): BelongsTo
     {
-        return $this->belongsTo(book::class, 'book_id', 'id');
+        return $this->belongsTo(Book::class, 'book_id', 'id');
     }
 
 

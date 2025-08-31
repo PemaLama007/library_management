@@ -7,19 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class book extends Model
+class Book extends Model
 {
     use HasFactory;
     protected $guarded = [];
 
     /**
-     * Get the auther that owns the book
+     * Get the author that owns the book
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function auther(): BelongsTo
+    public function author(): BelongsTo
     {
-        return $this->belongsTo(auther::class,'auther_id','id');
+        return $this->belongsTo(Author::class,'author_id','id');
     }
 
     /**
@@ -49,7 +49,7 @@ class book extends Model
      */
     public function bookIssues(): HasMany
     {
-        return $this->hasMany(book_issue::class);
+        return $this->hasMany(BookIssue::class);
     }
 
     /**

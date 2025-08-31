@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\auther;
+use App\Models\Author;
 use Illuminate\Database\Seeder;
 
-class AutherSeeder extends Seeder
+class AuthorSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -14,8 +14,8 @@ class AutherSeeder extends Seeder
      */
     public function run()
     {
-        if (auther::count() == 0) {
-            auther::factory(10)->create();
+        if (Author::count() == 0) {
+            Author::factory(10)->create();
         }
     }
 }

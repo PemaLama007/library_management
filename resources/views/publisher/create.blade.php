@@ -12,7 +12,7 @@
         </div>
         <div class="row">
             <div class="offset-md-3 col-md-6">
-                <form class="yourform" action="{{ route('publisher.store') }}" method="post" autocomplete="off">
+                <form class="yourform" action="{{ route('publishers.store') }}" method="post" autocomplete="off">
                     @csrf
                     <div class="form-group">
                         <label>Publisher Name</label>

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\category;
-use App\Http\Requests\StorecategoryRequest;
-use App\Http\Requests\UpdatecategoryRequest;
+use App\Models\Category;
+use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Requests\UpdateCategoryRequest;
 
 class CategoryController extends Controller
 {
@@ -16,7 +16,7 @@ class CategoryController extends Controller
     public function index()
     {
         return view('category.index', [
-            'categories' => category::Paginate(5)
+            'categories' => Category::Paginate(5)
         ]);
 
     }
@@ -34,22 +34,35 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \App\Http\Requests\StorecategoryRequest  $request
+     * @param  \App\Http\Requests\StoreCategoryRequest  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(StorecategoryRequest $request)
+    public function store(StoreCategoryRequest $request)
     {
-        category::create($request->validated());
+        Category::create($request->validated());
         return redirect()->route('categories');
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  \App\Models\Category  $category
+     * @return \Illuminate\Http\Response
+     */
+    public function show(Category $category)
+    {
+        return view('category.show', [
+            'category' => $category
+        ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\category  $category
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
-    public function edit(category $category)
+    public function edit(Category $category)
     {
         return view('category.edit', [
             'category' => $category
@@ -59,14 +72,14 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \App\Http\Requests\UpdatecategoryRequest  $request
-     * @param  \App\Models\category  $category
+     * @param  \App\Http\Requests\UpdateCategoryRequest  $request
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
-    public function update(UpdatecategoryRequest $request, $id)
+    public function update(UpdateCategoryRequest $request, $id)
     {
-        $category = category::find($id);
-        $category->name = $request->name;
+        $category = Category::find($id);
+        $category->name = $request->input('name');
         $category->save();
 
         return redirect()->route('categories');
@@ -79,7 +92,7 @@ class CategoryController extends Controller
      */
     public function destroy($id)
     {
-        category::find($id)->delete();
+        Category::find($id)->delete();
         return redirect()->route('categories');
     }
 }

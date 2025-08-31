@@ -9,7 +9,7 @@
         </div>
         <div class="row">
             <div class="offset-md-3 col-md-6">
-                <form class="yourform" action="{{ route('publisher.update', $publisher->id) }}" method="post"
+                <form class="yourform" action="{{ route('publishers.update', $publisher->id) }}" method="post"
                     autocomplete="off">
                     @csrf
                     <div class="form-group">

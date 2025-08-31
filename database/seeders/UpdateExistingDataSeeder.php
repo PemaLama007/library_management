@@ -3,9 +3,9 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\book;
-use App\Models\student;
-use App\Models\book_issue;
+use App\Models\Book;
+use App\Models\Student;
+use App\Models\BookIssue;
 
 class UpdateExistingDataSeeder extends Seeder
 {
@@ -34,7 +34,7 @@ class UpdateExistingDataSeeder extends Seeder
         
         foreach ($books as $book) {
             // Calculate how many times this book is currently issued (not returned)
-            $currentlyIssued = book_issue::where('book_id', $book->id)
+            $currentlyIssued = BookIssue::where('book_id', $book->id)
                 ->where('issue_status', 'N')
                 ->count();
             

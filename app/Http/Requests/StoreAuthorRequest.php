@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreautherRequest extends FormRequest
+class StoreAuthorRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,7 +24,7 @@ class StoreautherRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => 'required|unique:authers,name,except,id'
+            'name' => 'required|unique:authors,name,except,id'
         ];
     }
 }
