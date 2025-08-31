@@ -1,9 +1,15 @@
 {
-    "name": "laravel/laravel",
+    "name": "pemalama007/library-management-system",
     "type": "project",
-    "description": "The Laravel Framework.",
-    "keywords": ["framework", "laravel"],
+    "description": "A comprehensive Laravel-based Library Management System with inventory tracking, fine calculation, and reporting features.",
+    "keywords": ["library", "management", "laravel", "books", "inventory", "students"],
     "license": "MIT",
+    "authors": [
+        {
+            "name": "PemaLama007",
+            "email": "pema3528@gmail.com"
+        }
+    ],
     "require": {
         "php": "^7.3|^8.0",
         "guzzlehttp/guzzle": "^7.0.1",
