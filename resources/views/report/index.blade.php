@@ -142,7 +142,7 @@
                     <div class="export-section">
                         <h4><i class="fas fa-download"></i> Quick Export Options</h4>
                         <div class="export-buttons">
-                            <button class="btn btn-outline-primary" onclick="exportData('pdf')">
+                            <button class="btn btn-outline-danger" onclick="exportData('pdf')">
                                 <i class="fas fa-file-pdf"></i> Export as PDF
                             </button>
                             <button class="btn btn-outline-success" onclick="exportData('excel')">
@@ -169,19 +169,46 @@
             // Create download URL and trigger download
             const downloadUrl = `/reports/export/${format}`;
 
-            // Create a temporary link and trigger download
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = `library_report_${new Date().toISOString().split('T')[0]}.${format}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Reset button state after a short delay
-            setTimeout(() => {
-                button.innerHTML = originalText;
-                button.disabled = false;
-            }, 2000);
+            // Use fetch to handle the download properly
+            fetch(downloadUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Export failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    
+                    // Set filename based on format
+                    const timestamp = new Date().toISOString().split('T')[0];
+                    const extension = format === 'excel' ? 'xlsx' : format;
+                    link.download = `library_comprehensive_report_${timestamp}.${extension}`;
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Clean up
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Show success message
+                    alert(`${format.toUpperCase()} file has been downloaded successfully!`);
+                })
+                .catch(error => {
+                    console.error('Export error:', error);
+                    alert(`Failed to export ${format.toUpperCase()} file. Please try again.`);
+                })
+                .finally(() => {
+                    // Reset button state
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }, 1000);
+                });
         }
     </script>
 

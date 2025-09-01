@@ -99,6 +99,7 @@ Route::middleware('auth')->group(function () {
     
     // Export routes
     Route::get('/reports/export/{format}', [ReportsController::class, 'export'])->name('reports.export');
+    Route::get('/reports/export/{type}/{format}', [ReportsController::class, 'exportSpecific'])->name('reports.export.specific');
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');

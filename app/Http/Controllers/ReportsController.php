@@ -5,8 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Book;
 use App\Models\BookIssue;
 use App\Models\Student;
+use App\Models\Author;
+use App\Models\Publisher;
+use App\Models\Category;
+use App\Exports\LibraryDataExport;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportsController extends Controller
 {
@@ -100,105 +110,482 @@ class ReportsController extends Controller
 
     public function export($format)
     {
-        // Get all book issues with related data
+        $timestamp = now()->format('Y-m-d_H-i-s');
+        $filename = "library_comprehensive_report_{$timestamp}";
+
+        switch (strtolower($format)) {
+            case 'excel':
+                return $this->exportExcel($filename);
+            case 'csv':
+                return $this->exportCSV($filename);
+            case 'pdf':
+                return $this->exportPDF($filename);
+            default:
+                abort(400, 'Invalid export format. Use: excel, csv, or pdf');
+        }
+    }
+
+    private function exportExcel($filename)
+    {
+        try {
+            return Excel::download(new LibraryDataExport, $filename . '.xlsx');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to generate Excel file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function exportCSV($filename)
+    {
+        try {
+            // Get all data organized by sections
+            $allData = $this->getAllLibraryData();
+            
+            $headers = [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+                'Cache-Control' => 'no-cache, must-revalidate, post-check=0, pre-check=0',
+                'Expires' => '0'
+            ];
+
+            $callback = function() use ($allData) {
+                $file = fopen('php://output', 'w');
+                
+                // Add BOM for proper UTF-8 encoding in Excel
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                foreach ($allData as $sectionName => $sectionData) {
+                    // Add section header
+                    fputcsv($file, [strtoupper($sectionName) . ' SECTION']);
+                    fputcsv($file, []); // Empty line
+                    
+                    // Add data
+                    foreach ($sectionData as $row) {
+                        fputcsv($file, $row);
+                    }
+                    
+                    fputcsv($file, []); // Empty line between sections
+                    fputcsv($file, []); // Another empty line
+                }
+                
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to generate CSV file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function exportPDF($filename)
+    {
+        try {
+            $data = $this->getAllLibraryData();
+            
+            $pdf = Pdf::loadView('reports.pdf.comprehensive', [
+                'data' => $data,
+                'timestamp' => now()->format('F j, Y \a\t g:i A'),
+                'title' => 'Library Comprehensive Report'
+            ]);
+            
+            $pdf->setPaper('A4', 'landscape');
+            
+            return $pdf->download($filename . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to generate PDF file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function getAllLibraryData()
+    {
+        $data = [];
+
+        // Books Data
+        $books = Book::with(['author', 'category', 'publisher'])
+            ->orderBy('name')
+            ->get();
+            
+        $data['BOOKS'] = [
+            ['ID', 'Book Name', 'Author', 'Category', 'Publisher', 'ISBN', 'Total Copies', 'Available', 'Status', 'Created Date']
+        ];
+        
+        foreach ($books as $book) {
+            $data['BOOKS'][] = [
+                $book->id,
+                $book->name,
+                $book->author->name ?? 'N/A',
+                $book->category->name ?? 'N/A',
+                $book->publisher->name ?? 'N/A',
+                $book->isbn ?? 'N/A',
+                $book->total_copies ?? 1,
+                $book->available_copies ?? 1,
+                $book->status == 'Y' ? 'Active' : 'Inactive',
+                $book->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+
+        // Authors Data
+        $authors = Author::withCount('books')->orderBy('name')->get();
+        $data['AUTHORS'] = [
+            ['ID', 'Author Name', 'Total Books', 'Created Date']
+        ];
+        
+        foreach ($authors as $author) {
+            $data['AUTHORS'][] = [
+                $author->id,
+                $author->name,
+                $author->books_count,
+                $author->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+
+        // Publishers Data
+        $publishers = Publisher::withCount('books')->orderBy('name')->get();
+        $data['PUBLISHERS'] = [
+            ['ID', 'Publisher Name', 'Total Books', 'Created Date']
+        ];
+        
+        foreach ($publishers as $publisher) {
+            $data['PUBLISHERS'][] = [
+                $publisher->id,
+                $publisher->name,
+                $publisher->books_count,
+                $publisher->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+
+        // Categories Data
+        $categories = Category::withCount('books')->orderBy('name')->get();
+        $data['CATEGORIES'] = [
+            ['ID', 'Category Name', 'Total Books', 'Created Date']
+        ];
+        
+        foreach ($categories as $category) {
+            $data['CATEGORIES'][] = [
+                $category->id,
+                $category->name,
+                $category->books_count,
+                $category->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+
+        // Students Data
+        $students = Student::withCount('bookIssues')->orderBy('name')->get();
+        $data['STUDENTS'] = [
+            ['ID', 'Student ID', 'Name', 'Email', 'Phone', 'Address', 'Library Card', 'Total Issues', 'Current Issues', 'Registration Date']
+        ];
+        
+        foreach ($students as $student) {
+            $currentIssues = $student->bookIssues()->where('issue_status', 'N')->count();
+            $data['STUDENTS'][] = [
+                $student->id,
+                $student->student_id,
+                $student->name,
+                $student->email,
+                $student->phone,
+                $student->address ?? 'N/A',
+                $student->library_card_number ?? 'N/A',
+                $student->book_issues_count,
+                $currentIssues,
+                $student->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+
+        // Book Issues Data
         $bookIssues = BookIssue::with(['book', 'student'])
             ->orderBy('issue_date', 'desc')
             ->get();
-        
-        $data = [];
-        $data[] = ['Issue ID', 'Book Title', 'Student Name', 'Issue Date', 'Return Date', 'Status'];
+            
+        $data['BOOK_ISSUES'] = [
+            ['Issue ID', 'Book Name', 'Student Name', 'Student ID', 'Issue Date', 'Return Date', 'Status', 'Is Overdue', 'Student Phone', 'Student Email']
+        ];
         
         foreach ($bookIssues as $issue) {
-            $data[] = [
+            $isOverdue = $issue->issue_status == 'N' && $issue->return_date < now();
+            $data['BOOK_ISSUES'][] = [
                 $issue->id,
-                $issue->book ? $issue->book->title : 'N/A',
-                $issue->student ? $issue->student->name : 'N/A',
-                $issue->issue_date,
-                $issue->return_date ?? 'Not Returned',
-                $issue->issue_status == 'Y' ? 'Returned' : 'Issued'
+                $issue->book->name ?? 'N/A',
+                $issue->student->name ?? 'N/A',
+                $issue->student->student_id ?? 'N/A',
+                $issue->issue_date->format('Y-m-d'),
+                $issue->return_date->format('Y-m-d'),
+                $issue->issue_status == 'Y' ? 'Returned' : 'Issued',
+                $isOverdue ? 'Yes' : 'No',
+                $issue->student->phone ?? 'N/A',
+                $issue->student->email ?? 'N/A'
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Export specific data type (books, authors, publishers, categories, students, book_issues)
+     */
+    public function exportSpecific($type, $format)
+    {
+        $validTypes = ['books', 'authors', 'publishers', 'categories', 'students', 'book_issues'];
+        
+        if (!in_array($type, $validTypes)) {
+            abort(400, 'Invalid export type. Valid types: ' . implode(', ', $validTypes));
+        }
+
+        $timestamp = now()->format('Y-m-d_H-i-s');
+        $filename = "library_{$type}_report_{$timestamp}";
+
+        switch (strtolower($format)) {
+            case 'excel':
+                return $this->exportSpecificExcel($type, $filename);
+            case 'csv':
+                return $this->exportSpecificCSV($type, $filename);
+            case 'pdf':
+                return $this->exportSpecificPDF($type, $filename);
+            default:
+                abort(400, 'Invalid export format. Use: excel, csv, or pdf');
+        }
+    }
+
+    private function exportSpecificExcel($type, $filename)
+    {
+        try {
+            $data = $this->getSpecificData($type);
+            return Excel::download(new class($data) implements FromCollection, WithHeadings, WithStyles {
+                private $data;
+                
+                public function __construct($data) {
+                    $this->data = $data;
+                }
+                
+                public function collection() {
+                    return collect(array_slice($this->data, 1)); // Skip headers
+                }
+                
+                public function headings(): array {
+                    return $this->data[0]; // First row as headers
+                }
+                
+                public function styles(Worksheet $sheet) {
+                    return [1 => ['font' => ['bold' => true]]];
+                }
+            }, $filename . '.xlsx');
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to generate Excel file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function exportSpecificCSV($type, $filename)
+    {
+        try {
+            $data = $this->getSpecificData($type);
+            
+            $headers = [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+                'Cache-Control' => 'no-cache, must-revalidate, post-check=0, pre-check=0',
+                'Expires' => '0'
+            ];
+
+            $callback = function() use ($data) {
+                $file = fopen('php://output', 'w');
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM for UTF-8
+                
+                foreach ($data as $row) {
+                    fputcsv($file, $row);
+                }
+                
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to generate CSV file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function exportSpecificPDF($type, $filename)
+    {
+        try {
+            $data = $this->getSpecificData($type);
+            
+            $pdf = Pdf::loadView('reports.pdf.specific', [
+                'data' => $data,
+                'type' => $type,
+                'timestamp' => now()->format('F j, Y \a\t g:i A'),
+                'title' => ucfirst($type) . ' Report'
+            ]);
+            
+            $pdf->setPaper('A4', 'landscape');
+            
+            return $pdf->download($filename . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to generate PDF file: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function getSpecificData($type)
+    {
+        switch ($type) {
+            case 'books':
+                return $this->getBooksData();
+            case 'authors':
+                return $this->getAuthorsData();
+            case 'publishers':
+                return $this->getPublishersData();
+            case 'categories':
+                return $this->getCategoriesData();
+            case 'students':
+                return $this->getStudentsData();
+            case 'book_issues':
+                return $this->getBookIssuesData();
+            default:
+                throw new \Exception('Invalid data type');
+        }
+    }
+
+    private function getBooksData()
+    {
+        $books = Book::with(['author', 'category', 'publisher'])
+            ->orderBy('name')
+            ->get();
+            
+        $data = [
+            ['ID', 'Book Name', 'Author', 'Category', 'Publisher', 'ISBN', 'Total Copies', 'Available Copies', 'Currently Issued', 'Status', 'Created Date']
+        ];
+        
+        foreach ($books as $book) {
+            $data[] = [
+                $book->id,
+                $book->name,
+                $book->author->name ?? 'N/A',
+                $book->category->name ?? 'N/A',
+                $book->publisher->name ?? 'N/A',
+                $book->isbn ?? 'N/A',
+                $book->total_copies ?? 1,
+                $book->available_copies ?? 1,
+                $book->bookIssues()->where('issue_status', 'N')->count(),
+                $book->status == 'Y' ? 'Active' : 'Inactive',
+                $book->created_at->format('Y-m-d H:i:s')
             ];
         }
         
-        $filename = 'library_report_' . date('Y-m-d_H-i-s');
-        
-        switch (strtolower($format)) {
-            case 'csv':
-                return $this->exportCSV($data, $filename);
-            case 'excel':
-                return $this->exportExcel($data, $filename);
-            case 'pdf':
-                return $this->exportPDF($data, $filename);
-            default:
-                abort(400, 'Invalid export format');
-        }
+        return $data;
     }
-    
-    private function exportCSV($data, $filename)
+
+    private function getAuthorsData()
     {
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
-        ];
+        $authors = Author::withCount('books')->orderBy('name')->get();
+        $data = [['ID', 'Author Name', 'Total Books', 'Created Date']];
         
-        $callback = function() use ($data) {
-            $file = fopen('php://output', 'w');
-            foreach ($data as $row) {
-                fputcsv($file, $row);
-            }
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
-    }
-    
-    private function exportExcel($data, $filename)
-    {
-        // For simplicity, we'll export as CSV with .xlsx extension
-        // In a real application, you'd use a library like PhpSpreadsheet
-        $headers = [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '.xlsx"',
-        ];
-        
-        $callback = function() use ($data) {
-            $file = fopen('php://output', 'w');
-            foreach ($data as $row) {
-                fputcsv($file, $row);
-            }
-            fclose($file);
-        };
-        
-        return response()->stream($callback, 200, $headers);
-    }
-    
-    private function exportPDF($data, $filename)
-    {
-        // Simple HTML to PDF conversion using DomPDF would require additional setup
-        // For now, we'll return a simple HTML response that can be printed to PDF
-        $html = '<html><head><title>Library Report</title>';
-        $html .= '<style>table { border-collapse: collapse; width: 100%; }';
-        $html .= 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
-        $html .= 'th { background-color: #f2f2f2; }</style></head><body>';
-        $html .= '<h1>Library Report - ' . date('Y-m-d H:i:s') . '</h1>';
-        $html .= '<table>';
-        
-        $isHeader = true;
-        foreach ($data as $row) {
-            $html .= '<tr>';
-            foreach ($row as $cell) {
-                $tag = $isHeader ? 'th' : 'td';
-                $html .= '<' . $tag . '>' . htmlspecialchars($cell) . '</' . $tag . '>';
-            }
-            $html .= '</tr>';
-            $isHeader = false;
+        foreach ($authors as $author) {
+            $data[] = [
+                $author->id,
+                $author->name,
+                $author->books_count,
+                $author->created_at->format('Y-m-d H:i:s')
+            ];
         }
         
-        $html .= '</table></body></html>';
+        return $data;
+    }
+
+    private function getPublishersData()
+    {
+        $publishers = Publisher::withCount('books')->orderBy('name')->get();
+        $data = [['ID', 'Publisher Name', 'Total Books', 'Created Date']];
         
-        return response($html, 200, [
-            'Content-Type' => 'text/html',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '.html"',
-        ]);
+        foreach ($publishers as $publisher) {
+            $data[] = [
+                $publisher->id,
+                $publisher->name,
+                $publisher->books_count,
+                $publisher->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+        
+        return $data;
+    }
+
+    private function getCategoriesData()
+    {
+        $categories = Category::withCount('books')->orderBy('name')->get();
+        $data = [['ID', 'Category Name', 'Total Books', 'Created Date']];
+        
+        foreach ($categories as $category) {
+            $data[] = [
+                $category->id,
+                $category->name,
+                $category->books_count,
+                $category->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+        
+        return $data;
+    }
+
+    private function getStudentsData()
+    {
+        $students = Student::withCount('bookIssues')->orderBy('name')->get();
+        $data = [['ID', 'Student ID', 'Name', 'Email', 'Phone', 'Address', 'Library Card', 'Total Issues', 'Current Issues', 'Overdue Issues', 'Registration Date']];
+        
+        foreach ($students as $student) {
+            $currentIssues = $student->bookIssues()->where('issue_status', 'N')->count();
+            $overdueIssues = $student->bookIssues()
+                ->where('issue_status', 'N')
+                ->where('return_date', '<', now())
+                ->count();
+
+            $data[] = [
+                $student->id,
+                $student->student_id,
+                $student->name,
+                $student->email,
+                $student->phone,
+                $student->address ?? 'N/A',
+                $student->library_card_number ?? 'N/A',
+                $student->book_issues_count,
+                $currentIssues,
+                $overdueIssues,
+                $student->created_at->format('Y-m-d H:i:s')
+            ];
+        }
+        
+        return $data;
+    }
+
+    private function getBookIssuesData()
+    {
+        $bookIssues = BookIssue::with(['book', 'student'])
+            ->orderBy('issue_date', 'desc')
+            ->get();
+            
+        $data = [['Issue ID', 'Book Name', 'Student Name', 'Student ID', 'Issue Date', 'Return Date', 'Actual Return Date', 'Status', 'Is Overdue', 'Overdue Days', 'Student Phone', 'Student Email']];
+        
+        foreach ($bookIssues as $issue) {
+            $isOverdue = $issue->issue_status == 'N' && $issue->return_date < now();
+            $overdueDays = $isOverdue ? now()->diffInDays($issue->return_date) : 0;
+
+            $data[] = [
+                $issue->id,
+                $issue->book->name ?? 'N/A',
+                $issue->student->name ?? 'N/A',
+                $issue->student->student_id ?? 'N/A',
+                $issue->issue_date->format('Y-m-d'),
+                $issue->return_date->format('Y-m-d'),
+                $issue->actual_return_date ? $issue->actual_return_date->format('Y-m-d') : 'Not Returned',
+                $issue->issue_status == 'Y' ? 'Returned' : 'Issued',
+                $isOverdue ? 'Yes' : 'No',
+                $overdueDays,
+                $issue->student->phone ?? 'N/A',
+                $issue->student->email ?? 'N/A'
+            ];
+        }
+        
+        return $data;
     }
 
     /**

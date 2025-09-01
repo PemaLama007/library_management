@@ -169,7 +169,7 @@
             </div>
         </div>
         
-        <div class="col-md-4">
+        <div class="col-md-4 mt-2">
             <!-- Student Statistics -->
             <div class="stats-card">
                 <h6 class="mb-3">Library Statistics</h6>
@@ -192,9 +192,9 @@
             <!-- Action Buttons -->
             <div class="detail-card">
                 <div class="card-body text-center" style="padding: 30px;">
-                    <h6 class="mb-3" style="color: #495057;">Quick Actions</h6>
+                    <h6 class="mb-3 text-white">Quick Actions</h6>
                     <div class="d-grid gap-2">
-                        <a href="{{ route('student.edit', $student) }}" class="btn btn-primary btn-custom">
+                        <a href="{{ route('student.edit', $student) }}" class="btn btn-primary btn-custom my-2">
                             <i class="fas fa-edit me-1"></i>Edit Student
                         </a>
                         <button class="btn btn-success btn-custom" onclick="issueBook({{ $student->id }})">
@@ -278,7 +278,7 @@
                                     <h6 class="mb-0">Book Issue History</h6>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive">
+                                    <div class="table-responsive text-decoration-none">
                                         <table class="table table-sm">
                                             <thead>
                                                 <tr class="text-white">

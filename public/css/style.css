@@ -266,12 +266,17 @@ ul{
   opacity: 0.9;
   padding: 40px 20px;
 }
+
 .card-body .card-text{
   color: #fff;
   font-size: 40px;
   font-weight: 600;
   line-height: 40px;
   margin: 0 0 10px;
+}
+.card-body a {
+    color: inherit;
+    text-decoration: none;
 }
 .card-body .card-title{
   color: #fff;
