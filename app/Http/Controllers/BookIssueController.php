@@ -10,6 +10,7 @@ use App\Models\Book;
 use App\Models\Settings;
 use App\Models\Student;
 use App\Services\NotificationService;
+use App\Services\DynamicFineCalculator;
 use \Illuminate\Http\Request;
 
 class BookIssueController extends Controller
@@ -21,8 +22,19 @@ class BookIssueController extends Controller
      */
     public function index()
     {
+        $books = BookIssue::with(['student', 'book'])->paginate(5);
+        $fineCalculator = new DynamicFineCalculator();
+        $bookFines = [];
+        foreach ($books as $book) {
+            $bookFines[$book->id] = $fineCalculator->calculateProgressiveFine(
+                $book->issue_date,
+                $book->return_date,
+                $book->actual_return_date ?? now()->format('Y-m-d')
+            );
+        }
         return view('book.issueBooks', [
-            'books' => BookIssue::Paginate(5)
+            'books' => $books,
+            'bookFines' => $bookFines
         ]);
     }
 
@@ -97,22 +109,25 @@ class BookIssueController extends Controller
     {
         $bookIssue = BookIssue::with(['student', 'book', 'book.author', 'book.category', 'book.publisher'])->findOrFail($id);
         
-        // Calculate fine if applicable
-        $currentDate = date_create(date('Y-m-d'));
-        $returnDate = date_create($bookIssue->return_date->format('Y-m-d'));
-        $fine = 0;
+        // Use Dynamic Fine Calculator
+        $fineCalculator = new DynamicFineCalculator();
+        $fineData = $fineCalculator->calculateProgressiveFine(
+            $bookIssue->issue_date,
+            $bookIssue->return_date,
+            $bookIssue->actual_return_date
+        );
         
-        if ($currentDate > $returnDate && $bookIssue->issue_status == 'N') {
-            $diff = date_diff($returnDate, $currentDate);
-            $overdueDays = $diff->format('%a');
-            $settings = Settings::latest()->first();
-            $finePerDay = $settings ? $settings->fine : 0;
-            $fine = $overdueDays * $finePerDay;
-        }
+        // Calculate potential remission
+        $remissionData = $fineCalculator->calculateFineRemission(
+            $bookIssue->student_id,
+            $fineData['fine_amount']
+        );
         
         return view('book.issueBook_show', [
             'bookIssue' => $bookIssue,
-            'fine' => $fine,
+            'fine' => $fineData['fine_amount'],
+            'fineData' => $fineData,
+            'remissionData' => $remissionData,
         ]);
     }
 
@@ -124,23 +139,20 @@ class BookIssueController extends Controller
      */
     public function edit($id)
     {
-        // calculate the total fine  (total days * fine per day)
         $book = BookIssue::where('id',$id)->get()->first();
-        $currentDate = date_create(date('Y-m-d'));
-        $returnDate = date_create($book->return_date->format('Y-m-d'));
-        $fine = 0;
         
-        if ($currentDate > $returnDate && $book->issue_status == 'N') {
-            $diff = date_diff($returnDate, $currentDate);
-            $overdueDays = $diff->format('%a');
-            $settings = Settings::latest()->first();
-            $finePerDay = $settings ? $settings->fine : 0;
-            $fine = $overdueDays * $finePerDay;
-        }
+        // Use Dynamic Fine Calculator
+        $fineCalculator = new DynamicFineCalculator();
+        $fineData = $fineCalculator->calculateProgressiveFine(
+            $book->issue_date,
+            $book->return_date,
+            $book->actual_return_date
+        );
         
         return view('book.issueBook_edit', [
             'book' => $book,
-            'fine' => $fine,
+            'fine' => $fineData['fine_amount'],
+            'fineData' => $fineData,
         ]);
     }
 

@@ -49,7 +49,34 @@
                                 @if (date('Y-m-d') > $book->return_date->format('d-m-Y'))
                                     <tr>
                                         <td>Fine</td>
-                                        <td>Rs. {{ $fine }}</td>
+                                        <td>
+                                            Rs. {{ $fine }}
+                                            @if(isset($fineData['fine_breakdown']) && count($fineData['fine_breakdown']) > 0)
+                                                <div class="mt-2">
+                                                    <strong>Breakdown:</strong>
+                                                    <ul class="list-unstyled mb-0">
+                                                        @foreach($fineData['fine_breakdown'] as $tier)
+                                                            <li>
+                                                                <span class="badge bg-warning text-dark">{{ $tier['tier'] }}</span>
+                                                                {{ $tier['days'] }} days × ₹{{ $tier['rate_per_day'] }} = ₹{{ $tier['amount'] }}
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @endif
+                                            @if(isset($fineData['severity']))
+                                                <div class="mt-2">
+                                                    <span class="badge bg-danger">Severity: {{ ucfirst($fineData['severity']) }}</span>
+                                                </div>
+                                            @endif
+                                            @if(isset($remissionData) && $remissionData['discount_percentage'] > 0)
+                                                <div class="mt-2">
+                                                    <span class="badge bg-success">{{ $remissionData['discount_percentage'] }}% Discount</span>
+                                                    <span class="text-muted">({{ $remissionData['reason'] }})</span><br>
+                                                    <strong>Final Fine:</strong> ₹{{ number_format($remissionData['final_fine'], 2) }}
+                                                </div>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endif
                             @endif

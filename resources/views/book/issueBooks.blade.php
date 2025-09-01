@@ -63,17 +63,18 @@
                                     </td>
                                     <td>
                                         @if ($book->issue_status == 'N' && date('Y-m-d') > $book->return_date->format('Y-m-d'))
-                                            @php
-                                                $currentDate = date_create(date('Y-m-d'));
-                                                $returnDate = date_create($book->return_date->format('Y-m-d'));
-                                                $diff = date_diff($returnDate, $currentDate);
-                                                $overdueDays = $diff->format('%a');
-                                                $finePerDay = \App\Models\settings::latest()->first()->fine ?? 0;
-                                                $totalFine = $overdueDays * $finePerDay;
-                                            @endphp
-                                            <span class="text-danger">${{ $totalFine }}</span>
+                                            @php $fineData = $bookFines[$book->id] ?? null; @endphp
+                                            <span class="text-danger">₹{{ $fineData['fine_amount'] ?? 0 }}</span>
+                                            @if(isset($fineData['fine_breakdown']) && count($fineData['fine_breakdown']) > 0)
+                                                <span class="d-block small text-muted">Breakdown:
+                                                    @foreach($fineData['fine_breakdown'] as $tier)
+                                                        <span class="badge bg-warning text-dark">{{ $tier['tier'] }}</span>
+                                                        {{ $tier['days'] }}×₹{{ $tier['rate_per_day'] }}
+                                                    @endforeach
+                                                </span>
+                                            @endif
                                         @else
-                                            <span class="text-success">$0</span>
+                                            <span class="text-success">₹0</span>
                                         @endif
                                     </td>
                                     <td class="edit">

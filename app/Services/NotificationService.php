@@ -112,12 +112,14 @@ class NotificationService
      */
     private function calculateFine(BookIssue $bookIssue): float
     {
-        $settings = \App\Models\Settings::latest()->first();
-        $finePerDay = $settings ? $settings->fine : 1;
-        
-        $overdueDays = Carbon::now()->diffInDays(Carbon::parse($bookIssue->return_date));
-        
-        return max(0, $overdueDays * $finePerDay);
+        // Use DynamicFineCalculator for progressive fine
+        $fineCalculator = new \App\Services\DynamicFineCalculator();
+        $fineData = $fineCalculator->calculateProgressiveFine(
+            $bookIssue->issue_date,
+            $bookIssue->return_date,
+            $bookIssue->actual_return_date ?? now()->format('Y-m-d')
+        );
+        return $fineData['fine_amount'] ?? 0;
     }
 
     /**
