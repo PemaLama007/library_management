@@ -4,7 +4,6 @@
   <img src="https://img.shields.io/badge/Laravel-8.x-red?style=for-the-badge&logo=laravel" alt="Laravel">
   <img src="https://img.shields.io/badge/PHP-8.0+-blue?style=for-the-badge&logo=php" alt="PHP">
   <img src="https://img.shields.io/badge/MySQL-5.7+-orange?style=for-the-badge&logo=mysql" alt="MySQL">
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
 </p>
 
 <p align="center">
