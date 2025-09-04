@@ -17,6 +17,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\KMeansClusteringService;
+use App\Services\DynamicFineCalculator;
 
 class ReportsController extends Controller
 {
@@ -613,5 +615,284 @@ class ReportsController extends Controller
             'books', 'totalBooks', 'totalCopies', 'totalAvailable',
             'totalIssued', 'outOfStock', 'lowStock'
         ));
+    }
+
+    /**
+     * Show K-Means clustering analysis
+     */
+    public function clustering()
+    {
+        return view('report.clustering');
+    }
+
+    /**
+     * Perform student behavior clustering
+     */
+    public function clusterStudents(Request $request)
+    {
+        $request->validate([
+            'k' => 'required|integer|min:2|max:10'
+        ]);
+
+        $clusteringService = new KMeansClusteringService();
+        $results = $clusteringService->clusterStudentsByBehavior($request->k);
+
+        return response()->json([
+            'success' => true,
+            'data' => $results
+        ]);
+    }
+
+    /**
+     * Perform book usage clustering
+     */
+    public function clusterBooks(Request $request)
+    {
+        $request->validate([
+            'k' => 'required|integer|min:2|max:10'
+        ]);
+
+        $clusteringService = new KMeansClusteringService();
+        $results = $clusteringService->clusterBooksByUsage($request->k);
+
+        return response()->json([
+            'success' => true,
+            'data' => $results
+        ]);
+    }
+
+    /**
+     * Perform borrowing pattern clustering
+     */
+    public function clusterBorrowingPatterns(Request $request)
+    {
+        $request->validate([
+            'k' => 'required|integer|min:2|max:10'
+        ]);
+
+        $clusteringService = new KMeansClusteringService();
+        $results = $clusteringService->clusterBorrowingPatterns($request->k);
+
+        return response()->json([
+            'success' => true,
+            'data' => $results
+        ]);
+    }
+
+    /**
+     * Generate comprehensive clustering report
+     */
+    public function comprehensiveClusteringReport()
+    {
+        $clusteringService = new KMeansClusteringService();
+        
+        $studentClusters = $clusteringService->clusterStudentsByBehavior(3);
+        $bookClusters = $clusteringService->clusterBooksByUsage(4);
+        $borrowingClusters = $clusteringService->clusterBorrowingPatterns(3);
+
+        return view('report.comprehensive-clustering', compact(
+            'studentClusters', 'bookClusters', 'borrowingClusters'
+        ));
+    }
+
+    /**
+     * Export clustering results
+     */
+    public function exportClustering($type, $format)
+    {
+        $clusteringService = new KMeansClusteringService();
+        
+        switch ($type) {
+            case 'students':
+                $data = $clusteringService->clusterStudentsByBehavior(3);
+                break;
+            case 'books':
+                $data = $clusteringService->clusterBooksByUsage(4);
+                break;
+            case 'borrowing':
+                $data = $clusteringService->clusterBorrowingPatterns(3);
+                break;
+            case 'comprehensive':
+                $data = [
+                    'students' => $clusteringService->clusterStudentsByBehavior(3),
+                    'books' => $clusteringService->clusterBooksByUsage(4),
+                    'borrowing' => $clusteringService->clusterBorrowingPatterns(3)
+                ];
+                break;
+            default:
+                abort(400, 'Invalid clustering type');
+        }
+
+        $timestamp = now()->format('Y-m-d_H-i-s');
+        $filename = "clustering_{$type}_{$timestamp}";
+
+        switch (strtolower($format)) {
+            case 'excel':
+                return $this->exportClusteringExcel($data, $filename);
+            case 'csv':
+                return $this->exportClusteringCSV($data, $filename);
+            case 'pdf':
+                return $this->exportClusteringPDF($data, $filename);
+            default:
+                abort(400, 'Invalid export format');
+        }
+    }
+
+    private function exportClusteringExcel($data, $filename)
+    {
+        try {
+            // Create a simple export for clustering data
+            $exportData = $this->prepareClusteringExportData($data);
+            return Excel::download(new LibraryDataExport($exportData), $filename . '.xlsx');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to generate Excel file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function exportClusteringCSV($data, $filename)
+    {
+        try {
+            $exportData = $this->prepareClusteringExportData($data);
+            
+            $headers = [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+                'Cache-Control' => 'no-cache, must-revalidate, post-check=0, pre-check=0',
+                'Expires' => '0'
+            ];
+
+            $callback = function() use ($exportData) {
+                $file = fopen('php://output', 'w');
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                foreach ($exportData as $sectionName => $sectionData) {
+                    fputcsv($file, [strtoupper($sectionName) . ' SECTION']);
+                    fputcsv($file, []);
+                    
+                    foreach ($sectionData as $row) {
+                        fputcsv($file, $row);
+                    }
+                    
+                    fputcsv($file, []);
+                    fputcsv($file, []);
+                }
+                
+                fclose($file);
+            };
+
+            return response()->stream($callback, 200, $headers);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to generate CSV file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function exportClusteringPDF($data, $filename)
+    {
+        try {
+            $exportData = $this->prepareClusteringExportData($data);
+            
+            $pdf = Pdf::loadView('reports.pdf.clustering', [
+                'data' => $exportData,
+                'timestamp' => now()->format('F j, Y \a\t g:i A'),
+                'title' => 'Clustering Analysis Report'
+            ]);
+            
+            $pdf->setPaper('A4', 'landscape');
+            return $pdf->download($filename . '.pdf');
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to generate PDF file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function prepareClusteringExportData($data)
+    {
+        $exportData = [];
+        
+        if (isset($data['students'])) {
+            $exportData['Student Clusters'] = $this->formatStudentClustersForExport($data['students']);
+        } elseif (isset($data[0]['students'])) {
+            $exportData['Student Clusters'] = $this->formatStudentClustersForExport($data);
+        }
+        
+        if (isset($data['books'])) {
+            $exportData['Book Clusters'] = $this->formatBookClustersForExport($data['books']);
+        } elseif (isset($data[0]['books'])) {
+            $exportData['Book Clusters'] = $this->formatBookClustersForExport($data);
+        }
+        
+        if (isset($data['borrowing'])) {
+            $exportData['Borrowing Pattern Clusters'] = $this->formatBorrowingClustersForExport($data['borrowing']);
+        } elseif (isset($data[0]['patterns'])) {
+            $exportData['Borrowing Pattern Clusters'] = $this->formatBorrowingClustersForExport($data);
+        }
+        
+        return $exportData;
+    }
+
+    private function formatStudentClustersForExport($clusters)
+    {
+        $exportData = [['Cluster ID', 'Student Name', 'Total Borrowed', 'Overdue Rate', 'Total Fines', 'Category Diversity', 'Return Compliance']];
+        
+        foreach ($clusters as $cluster) {
+            foreach ($cluster['students'] as $studentData) {
+                $exportData[] = [
+                    $cluster['cluster_id'],
+                    $studentData['student']->name,
+                    $studentData['features']['total_borrowed'],
+                    round($studentData['features']['overdue_rate'] * 100, 2) . '%',
+                    '₹' . $studentData['features']['total_fines'],
+                    round($studentData['features']['category_diversity'] * 100, 2) . '%',
+                    round($studentData['features']['return_compliance'] * 100, 2) . '%'
+                ];
+            }
+        }
+        
+        return $exportData;
+    }
+
+    private function formatBookClustersForExport($clusters)
+    {
+        $exportData = [['Cluster ID', 'Book Name', 'Borrow Count', 'Availability Rate', 'Avg Borrow Duration', 'Recent Popularity']];
+        
+        foreach ($clusters as $cluster) {
+            foreach ($cluster['books'] as $bookData) {
+                $exportData[] = [
+                    $cluster['cluster_id'],
+                    $bookData['book']->name,
+                    $bookData['features']['borrow_count'],
+                    round($bookData['features']['availability_rate'] * 100, 2) . '%',
+                    $bookData['features']['avg_borrow_duration'] . ' days',
+                    $bookData['features']['recent_popularity']
+                ];
+            }
+        }
+        
+        return $exportData;
+    }
+
+    private function formatBorrowingClustersForExport($clusters)
+    {
+        $exportData = [['Cluster ID', 'Student Name', 'Monthly Frequency', 'Weekday Preference', 'Return Timing', 'Category Preference']];
+        
+        foreach ($clusters as $cluster) {
+            foreach ($cluster['patterns'] as $patternData) {
+                $exportData[] = [
+                    $cluster['cluster_id'],
+                    $patternData['features']['student_name'],
+                    round($patternData['features']['monthly_frequency'], 2) . ' per month',
+                    round($patternData['features']['weekday_preference'] * 100, 2) . '%',
+                    $patternData['features']['return_timing'] . ' days',
+                    round($patternData['features']['book_category_preference'] * 100, 2) . '%'
+                ];
+            }
+        }
+        
+        return $exportData;
     }
 }

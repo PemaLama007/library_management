@@ -108,6 +108,19 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="card report-card">
+                        <div class="card-body text-center">
+                            <div class="report-icon bg-info text-white mb-3">
+                                <i class="fas fa-chart-pie fa-2x"></i>
+                            </div>
+                            <h5 class="card-title">K-Means Clustering Analysis</h5>
+                            <a href="{{ route('reports.clustering') }}" class="btn btn-info">
+                                <i class="fas fa-brain"></i> Analyze Data
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 {{-- <div class="col-lg-4 col-md-6 mb-3">
                     <div class="card report-card">
                         <div class="card-body text-center">

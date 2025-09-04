@@ -47,7 +47,7 @@
                         <tbody>
                             @forelse ($books as $book)
                                 <tr style='@if (date('Y-m-d') > $book->return_date->format('d-m-Y') && $book->issue_status == 'N') ) background:rgba(255,0,0,0.2) @endif'>
-                                    <td>{{ $book->id }}</td>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $book->student->name }}</td>
                                     <td>{{ $book->book->name }}</td>
                                     <td>{{ $book->student->phone }}</td>

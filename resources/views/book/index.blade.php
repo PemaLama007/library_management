@@ -47,7 +47,7 @@
                         <tbody>
                             @forelse ($books as $book)
                                 <tr>
-                                    <td class="id">{{ $book->id }}</td>
+                                    <td class="id">{{ $book->serial_number }}</td>
                                     <td>{{ $book->name }}</td>
                                     <td>{{ $book->category->name }}</td>
                                     <td>{{ $book->author->name }}</td>

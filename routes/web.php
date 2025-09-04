@@ -11,6 +11,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\StudentController;
+
 use Illuminate\Support\Facades\Route;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 
@@ -99,7 +100,17 @@ Route::middleware('auth')->group(function () {
     
     // Export routes
     Route::get('/reports/export/{format}', [ReportsController::class, 'export'])->name('reports.export');
-    Route::get('/reports/export/{type}/{format}', [ReportsController::class, 'exportSpecific'])->name('reports.export.specific');
+Route::get('/reports/export/{type}/{format}', [ReportsController::class, 'exportSpecific'])->name('reports.export.specific');
+
+// K-Means Clustering Routes
+Route::get('/reports/clustering', [ReportsController::class, 'clustering'])->name('reports.clustering');
+Route::post('/reports/cluster/students', [ReportsController::class, 'clusterStudents'])->name('reports.cluster.students');
+Route::post('/reports/cluster/books', [ReportsController::class, 'clusterBooks'])->name('reports.cluster.books');
+Route::post('/reports/cluster/borrowing', [ReportsController::class, 'clusterBorrowingPatterns'])->name('reports.cluster.borrowing');
+Route::get('/reports/clustering/comprehensive', [ReportsController::class, 'comprehensiveClusteringReport'])->name('reports.clustering.comprehensive');
+Route::get('/reports/clustering/export/{type}/{format}', [ReportsController::class, 'exportClustering'])->name('reports.clustering.export');
+
+    
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');

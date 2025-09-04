@@ -15,7 +15,17 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Check for overdue books daily at 9:00 AM
+        $schedule->command('library:check-overdue')
+                ->dailyAt('09:00')
+                ->withoutOverlapping()
+                ->runInBackground();
+        
+        // Send pending notifications every hour
+        $schedule->command('library:send-notifications')
+                ->hourly()
+                ->withoutOverlapping()
+                ->runInBackground();
     }
 
     /**

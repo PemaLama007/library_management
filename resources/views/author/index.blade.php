@@ -41,7 +41,7 @@
                         <tbody>
                             @forelse ($authors as $author)
                                 <tr>
-                                    <td>{{ $author->id }}</td>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $author->name }}</td>
                                     <td class="edit">
                                         <a href="{{ route('authors.edit', $author) }}" class="btn btn-success">Edit</a>

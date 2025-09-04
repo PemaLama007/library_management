@@ -7,6 +7,7 @@ use App\Models\BookIssue;
 use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
@@ -95,16 +96,36 @@ class NotificationService
      */
     private function sendNotification(Notification $notification): bool
     {
-        // For now, we'll just mark as sent
-        // In the future, integrate with email/SMS services
+        try {
+            if ($notification->type === 'overdue_notice') {
+                // Send email for overdue notices
+                $this->sendOverdueEmail($notification);
+            } else {
+                // For other notification types, just log for now
+                Log::info("Notification sent: {$notification->title} to {$notification->student->name}");
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to send notification: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send overdue email notification
+     */
+    private function sendOverdueEmail(Notification $notification): void
+    {
+        $bookIssue = $notification->bookIssue;
+        $overdueDays = Carbon::now()->diffInDays(Carbon::parse($bookIssue->return_date));
+        $fineAmount = $this->calculateFine($bookIssue);
         
-        // Example email integration (uncomment when needed):
-        // Mail::to($notification->student->email)->send(new NotificationMail($notification));
+        // Send email using the mail class
+        Mail::to($notification->student->email)
+            ->send(new \App\Mail\OverdueBookNotification($bookIssue, $overdueDays, $fineAmount));
         
-        // Simulate successful sending
-        Log::info("Notification sent: {$notification->title} to {$notification->student->name}");
-        
-        return true;
+        Log::info("Overdue email sent to {$notification->student->name} ({$notification->student->email}) for book: {$bookIssue->book->name}");
     }
 
     /**

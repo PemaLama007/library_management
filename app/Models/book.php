@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\HasSerialNumber;
+use Illuminate\Support\Facades\Schema;
 
 class Book extends Model
 {
-    use HasFactory;
+    use HasFactory, HasSerialNumber;
     protected $guarded = [];
 
     /**
@@ -90,5 +92,56 @@ class Book extends Model
             return true;
         }
         return false;
+    }
+
+    /**
+     * Get serial number for display
+     */
+    public function getSerialNumberAttribute()
+    {
+        // Check if serial_number column exists and has a value
+        if (isset($this->attributes['serial_number']) && $this->attributes['serial_number']) {
+            return $this->attributes['serial_number'];
+        }
+        
+        // Fallback to count-based approach (works even without the column)
+        return static::where('id', '<=', $this->id)->count();
+    }
+
+    /**
+     * Boot method to handle serial number assignment
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($book) {
+            // Only set serial_number if the column exists
+            if (Schema::hasColumn('books', 'serial_number') && !isset($book->serial_number)) {
+                $maxSerial = static::max('serial_number') ?? 0;
+                $book->serial_number = $maxSerial + 1;
+            }
+        });
+        
+        static::deleted(function ($book) {
+            // Only reorder if the column exists
+            if (Schema::hasColumn('books', 'serial_number')) {
+                static::reorderSerialNumbers();
+            }
+        });
+    }
+
+    /**
+     * Reorder serial numbers after deletion
+     */
+    public static function reorderSerialNumbers()
+    {
+        $books = static::orderBy('id')->get();
+        $serialNumber = 1;
+        
+        foreach ($books as $book) {
+            $book->update(['serial_number' => $serialNumber]);
+            $serialNumber++;
+        }
     }
 }
